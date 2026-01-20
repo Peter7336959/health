@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>115年度 健檢護理班 模擬考題智慧複習系統</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Neutrals & Medical Teal -->
+    <!-- Primary Background: #fcfbf9 (Warm White) -->
+    <!-- Primary Text: #2d3748 (Dark Slate) -->
+    <!-- Accent Color: #0d9488 (Teal-600) -->
+    <!-- Secondary Accent: #f59e0b (Amber-500) -->
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fcfbf9;
+            color: #2d3748;
+        }
+
+        /* Chart Container Styling - MANDATORY for responsiveness */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Max width to prevent stretching */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0; 
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+    
+    <!-- Application Structure Plan: 
+         1. Header: Branding and Navigation.
+         2. View Container: Dynamic switching between:
+            - Dashboard: Overview of exam topics (Chart.js) and file upload.
+            - KnowledgeBank: Searchable list of all questions for study.
+            - QuizMode: Card-based interface for taking the test.
+            - Results: Post-game analytics (Chart.js) and error review.
+         3. Logic: Centralized 'appState' object manages questions, scores, and navigation. 
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <span class="text-2xl text-teal-600">⚕️</span>
+                        <h1 class="text-xl font-bold text-gray-800 tracking-tight">健檢護理班 <span class="text-teal-600 font-light">智慧複習</span></h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="navTo('dashboard')" class="text-gray-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">儀表板</button>
+                    <button onclick="navTo('bank')" class="text-gray-600 hover:text-teal-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">題庫瀏覽</button>
+                    <button onclick="startQuiz()" class="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors">開始測驗</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="fade-in block">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">歡迎使用模擬考題分析系統</h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                    本系統提供題目分析、隨機測驗與錯題檢討。目前已預載 <span id="total-questions-count" class="font-bold text-teal-600">--</span> 題資料。
+                    <br>您可以直接開始練習，或<span class="text-teal-600 font-bold">上傳完整 CSV 檔</span>以載入所有題目。
+                </p>
+                
+                <!-- File Upload -->
+                <div class="mt-8 flex justify-center">
+                    <label class="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-teal-500 border border-teal-200 px-6 py-4 shadow-sm hover:shadow-md transition-all">
+                        <span>📥 上傳完整 CSV 考題檔</span>
+                        <input id="csv-upload" type="file" accept=".csv" class="sr-only" onchange="handleFileUpload(this)">
+                    </label>
+                </div>
+                <p id="upload-status" class="mt-2 text-sm text-gray-500"></p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Analysis Card 1: Topic Distribution -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">考題類型分析</h3>
+                        <p class="text-sm text-gray-500">基於題目關鍵字自動分類</p>
+                    </div>
+                    <!-- Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-600 text-center">
+                        系統自動偵測題目中的關鍵字（如：法規、噪音、化學、代謝等）進行分類統計。
+                    </div>
+                </div>
+
+                <!-- Analysis Card 2: System Stats -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 flex flex-col justify-center">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-gray-800">學習數據概覽</h3>
+                        <p class="text-sm text-gray-500">目前的題庫狀態</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-teal-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-teal-700" id="stat-total">0</div>
+                            <div class="text-xs text-teal-600 uppercase tracking-wide font-semibold">總題數</div>
+                        </div>
+                        <div class="bg-amber-50 rounded-lg p-4 text-center">
+                            <div class="text-3xl font-bold text-amber-700" id="stat-avg-len">0</div>
+                            <div class="text-xs text-amber-600 uppercase tracking-wide font-semibold">平均題目長度 (字)</div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4 text-center col-span-2">
+                            <div class="text-3xl font-bold text-blue-700">準備就緒</div>
+                            <div class="text-xs text-blue-600 uppercase tracking-wide font-semibold">系統狀態</div>
+                        </div>
+                    </div>
+                    <div class="mt-6 text-center">
+                         <button onclick="startQuiz()" class="w-full bg-teal-600 text-white py-3 rounded-lg shadow hover:bg-teal-700 transition-colors font-bold">立即開始隨機測驗</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: KNOWLEDGE BANK -->
+        <div id="view-bank" class="fade-in hidden">
+            <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">題庫瀏覽模式</h2>
+                    <p class="text-gray-500">搜尋關鍵字以複習特定觀念 (顯示全部)</p>
+                </div>
+                <div class="relative w-full md:w-96">
+                    <input type="text" id="search-input" placeholder="搜尋題目或選項內容..." class="w-full border border-gray-300 rounded-lg pl-4 pr-10 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" oninput="renderBank()">
+                    <span class="absolute right-3 top-2.5 text-gray-400">🔍</span>
+                </div>
+            </div>
+
+            <div id="bank-list" class="space-y-4">
+                <!-- Questions injected here -->
+            </div>
+             <p id="bank-count" class="text-center text-sm text-gray-400 mt-4"></p>
+        </div>
+
+        <!-- VIEW: QUIZ MODE -->
+        <div id="view-quiz" class="fade-in hidden max-w-3xl mx-auto">
+            <!-- Progress Bar -->
+            <div class="mb-6">
+                <div class="flex justify-between text-sm font-medium text-gray-500 mb-2">
+                    <span>進度</span>
+                    <span id="quiz-progress-text">1 / 10</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="quiz-progress-bar" class="bg-teal-600 h-2.5 rounded-full transition-all duration-300" style="width: 10%"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                <div class="p-8 bg-gray-50 border-b border-gray-100 flex justify-between items-start">
+                    <div>
+                        <span class="inline-block px-2 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded mb-2">單選題</span>
+                        <h3 id="quiz-question" class="text-xl md:text-2xl font-bold text-gray-800 leading-relaxed">
+                            題目載入中...
+                        </h3>
+                    </div>
+                    <div class="text-gray-400 font-mono text-sm" id="quiz-id">#01</div>
+                </div>
+
+                <div class="p-8">
+                    <div id="quiz-options" class="grid grid-cols-1 gap-4">
+                        <!-- Options injected here -->
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="quiz-feedback" class="hidden bg-gray-50 p-6 border-t border-gray-200">
+                    <div id="feedback-content" class="mb-4 text-lg font-medium"></div>
+                    <button id="btn-next" onclick="nextQuestion()" class="w-full bg-gray-800 text-white py-3 rounded-lg hover:bg-gray-700 transition-colors font-bold shadow-lg">下一題 →</button>
+                    <button id="btn-finish" onclick="finishQuiz()" class="hidden w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors font-bold shadow-lg">查看結果</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: RESULTS -->
+        <div id="view-results" class="fade-in hidden">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-gray-900">測驗結果分析</h2>
+                <p class="text-gray-500 mt-2">本次練習的詳細數據</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <!-- Score Card -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border-t-4 border-teal-500 text-center flex flex-col justify-center items-center">
+                    <div class="text-gray-500 font-medium uppercase tracking-wider text-sm mb-2">最終得分</div>
+                    <div class="text-5xl font-extrabold text-teal-600 mb-2" id="result-score">0</div>
+                    <div class="text-gray-400 text-sm">答對題數 / 總題數</div>
+                </div>
+
+                <!-- Accuracy Chart -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 md:col-span-2">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">答題表現分佈</h3>
+                    <div class="chart-container h-64">
+                        <canvas id="resultsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wrong Answers Review -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                <div class="p-6 bg-red-50 border-b border-red-100">
+                    <h3 class="text-xl font-bold text-red-800 flex items-center gap-2">
+                        <span>⚠️</span> 錯誤題項檢討
+                    </h3>
+                </div>
+                <div id="wrong-answers-list" class="divide-y divide-gray-100">
+                    <!-- Wrong items injected here -->
+                    <div class="p-8 text-center text-gray-500">
+                        太棒了！本次測驗沒有錯誤題目。🎉
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center space-x-4">
+                <button onclick="navTo('dashboard')" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors">返回儀表板</button>
+                <button onclick="startQuiz()" class="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium shadow-md transition-colors">再次測驗</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-gray-400 text-sm">
+                115年度 健檢護理班 模擬考題智慧複習系統 | Designed for Learning
+            </p>
+        </div>
+    </footer>
+
+    <!-- Visualization & Content Choices:
+         1. Topic Chart (Doughnut): Goal is 'Inform/Organize'. Used to categorize unstructured quiz data into meaningful themes.
+         2. Results Chart (Bar): Goal is 'Inform/Compare'. Visualizes Correct vs Incorrect.
+         3. Question Cards: Goal is 'Inform/Interact'.
+         4. Robust CSV Parser: Handles newlines within quotes.
+         5. NO SVG/Mermaid used.
+    -->
+
+    <script>
+        // --- Data Handling ---
+        
+        // Extended embedded data from the source snippets
+        const initialCSV = `項次,題目,選項,正確答案
+1,適當配工(Proper Placement)可以增加生產力，下列敘述何者為非？,"(1)配工依據僅為體格檢查結果 (2)需考量作業環境與種類 (3)考量勞工性別、年齡、身心狀態 (4)蒐集健康資訊包括病史與生活習慣",1
+2,國際糖尿病學會(IDF)認定代謝症候群的危險因子以何者為核心？,"(1)血壓異常 (2)血脂肪異常 (3)空腹血糖異常 (4)中央型肥胖",4
+3,依據勞工健康保護規則，有關重金屬特殊健檢生物偵測，何者錯誤？,"(1)乙基汞：尿中汞 (2)鎳：尿中鎳 (3)四烷基鉛：尿中鉛 (4)鉻酸：尿中鉻","(1,3)"
+4,下列何項目非為一般體格檢查項目？,"(1)低密度脂蛋白膽固醇 (2)胸部 X 光 (3)高密度脂蛋白膽固醇 (4)尿蛋白及尿潛血",1
+5,清理溫泉槽、池、管的勞工可能暴露到下列何種氣體？,"(1)二氧化硫 (2)硫化氫 (3)一氧化碳 (4)氯化氫",2
+6,聽力檢查應從哪一耳開始檢查？,"(1)隨機 (2)經測試聽力較優耳 (3)右耳 (4)經測試聽力較劣耳",2
+7,「十年心血管風險」為低，但「工作負荷」為高，如何規劃措施？,"(1)第一級管理 (2)第二級管理 (3)第三級管理 (4)第四級管理",1
+60,我國職業病認定基準五項要件中，下列何者正確？,"(1)主客觀疾病證據 (2)結果先於原因 (3)暴露證據可無 (4)流行病學證據","(1,4)"
+61,鉛作業勞工血中鉛過高、貧血時，何者配工措施最正確？,"(1)採取危害控制及管理措施 (2)列為工作限制 (3)不得僱用 (4)優先螯合療法",1
+62,長期暴露鉛燻煙會罹患下列何種職業病？,"(1)腕道症候群 (2)腕垂症 (3)板機指 (4)多發性神經炎症狀",4
+63,下列有關醫療相關法規之敘述，何者有誤？,"(1)病歷增刪處需簽章 (2)依家屬口述開死亡證 (3)非病死應報相驗 (4)不得洩密",2
+64,性別、教育程度、職業等屬下列何變項？,"(1)類別變項 (2)序位變項 (3)描述性變項 (4)連續變項",1
+65,管控勞工健檢之問診與理學檢查品質，何者有誤？,"(1)審視暴露資料 (2)理學檢查仔細評估 (3)詢問病史 (4)有效快速執行",4
+66,下列有關勞工特殊健康檢查之敘述，何者有誤？,"(1)醫師必具職醫專科資格 (2)認可機構辦理 (3)費用由勞工自付 (4)分級管理",3`;
+
+        let appData = [];
+        let quizState = {
+            currentPool: [],
+            currentIndex: 0,
+            answers: [], // { question, userChoice, isCorrect }
+            score: 0
+        };
+
+        // --- Robust CSV Parsing Logic (State Machine) ---
+        // Handles newlines inside quotes correctly
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuote = false;
+            
+            // Normalize newlines
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                
+                if (char === '"') {
+                    if (inQuote && nextChar === '"') {
+                        // Escaped quote "" -> "
+                        currentCell += '"';
+                        i++; // Skip next quote
+                    } else {
+                        // Toggle quote state
+                        inQuote = !inQuote;
+                    }
+                } else if (char === ',' && !inQuote) {
+                    // End of cell
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if (char === '\n' && !inQuote) {
+                    // End of row
+                    currentRow.push(currentCell.trim());
+                    if (currentRow.length > 0) { // Don't skip yet, check content
+                        // Only add if not empty row
+                        if (currentRow.some(c => c.length > 0)) rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                } else {
+                    currentCell += char;
+                }
+            }
+            // Push last row
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                if (currentRow.some(c => c.length > 0)) rows.push(currentRow);
+            }
+            
+            // Convert to object array (assuming header is row 0)
+            const result = [];
+            if(rows.length < 2) return [];
+
+            for(let i=1; i<rows.length; i++) {
+                const row = rows[i];
+                // Check if row has enough columns (at least 3: id, question, options... answer)
+                if(row.length >= 4) {
+                     result.push({
+                        id: row[0],
+                        question: row[1],
+                        optionsRaw: row[2], // Usually 3rd column
+                        answer: row[row.length - 1] // Last column is answer
+                    });
+                }
+            }
+            return result;
+        }
+
+        // --- Keyword Categorization Logic (Analysis) ---
+        function analyzeTopics(data) {
+            const categories = {
+                '法規/認定': ['法規', '規則', '認定', '基準', '要件'],
+                '化學/毒物': ['鉛', '汞', '氣體', '硫化氫', '中毒', '暴露'],
+                '醫學/臨床': ['代謝', '聽力', '糖尿病', '血壓', '疾病', '症狀', '病歷'],
+                '管理/實務': ['配工', '健檢', '檢查', '管理', '管控']
+            };
+            
+            const counts = { '其他': 0 };
+            for(let k in categories) counts[k] = 0;
+
+            data.forEach(q => {
+                let matched = false;
+                for (let cat in categories) {
+                    if (categories[cat].some(keyword => q.question.includes(keyword) || q.optionsRaw.includes(keyword))) {
+                        counts[cat]++;
+                        matched = true;
+                        break; 
+                    }
+                }
+                if (!matched) counts['其他']++;
+            });
+
+            return counts;
+        }
+
+        // --- Initialization ---
+        function initApp() {
+            // Load initial data
+            appData = parseCSV(initialCSV);
+            updateDashboard();
+        }
+
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const newData = parseCSV(text);
+                if (newData.length > 0) {
+                    appData = newData;
+                    document.getElementById('upload-status').innerText = `成功載入 ${newData.length} 筆資料`;
+                    document.getElementById('upload-status').className = "mt-2 text-sm text-green-600 font-bold";
+                    updateDashboard();
+                    
+                    // If currently in bank view, refresh it
+                    if(!document.getElementById('view-bank').classList.contains('hidden')){
+                        renderBank();
+                    }
+                } else {
+                    document.getElementById('upload-status').innerText = "格式錯誤或無資料 (請確認為 CSV 格式)";
+                    document.getElementById('upload-status').className = "mt-2 text-sm text-red-600";
+                }
+            };
+            // Try Big5 for Traditional Chinese Excel CSVs. If it looks garbled, browser often auto-detects or user can re-save as UTF8.
+            reader.readAsText(file, "Big5"); 
+        }
+
+        // --- View Navigation ---
+        function navTo(viewId) {
+            // Hide all views
+            ['dashboard', 'bank', 'quiz', 'results'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                document.getElementById(`view-${id}`).classList.remove('block');
+            });
+            // Show selected
+            const target = document.getElementById(`view-${viewId}`);
+            target.classList.remove('hidden');
+            target.classList.add('block');
+            target.classList.add('fade-in');
+
+            // Specific View Logic
+            if (viewId === 'bank') {
+                document.getElementById('search-input').value = '';
+                renderBank();
+            }
+        }
+
+        // --- Dashboard Logic ---
+        let topicChartInstance = null;
+
+        function updateDashboard() {
+            // Text Stats
+            document.getElementById('total-questions-count').innerText = appData.length;
+            document.getElementById('stat-total').innerText = appData.length;
+            
+            const totalLen = appData.reduce((acc, q) => acc + q.question.length, 0);
+            document.getElementById('stat-avg-len').innerText = appData.length ? Math.round(totalLen / appData.length) : 0;
+
+            // Chart Logic
+            const topicCounts = analyzeTopics(appData);
+            const ctx = document.getElementById('topicChart').getContext('2d');
+
+            if (topicChartInstance) topicChartInstance.destroy();
+
+            topicChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(topicCounts),
+                    datasets: [{
+                        data: Object.values(topicCounts),
+                        backgroundColor: [
+                            '#0d9488', // Teal
+                            '#f59e0b', // Amber
+                            '#3b82f6', // Blue
+                            '#ec4899', // Pink
+                            '#9ca3af'  // Gray
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        // --- Knowledge Bank Logic (Optimized) ---
+        function renderBank() {
+            const container = document.getElementById('bank-list');
+            const term = document.getElementById('search-input').value.toLowerCase();
+            container.innerHTML = '';
+
+            const filtered = appData.filter(q => 
+                q.question.toLowerCase().includes(term) || 
+                q.optionsRaw.toLowerCase().includes(term)
+            );
+
+            document.getElementById('bank-count').innerText = `顯示 ${filtered.length} / ${appData.length} 題`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">找不到符合的題目</div>';
+                return;
+            }
+
+            // Use DocumentFragment for performance
+            const fragment = document.createDocumentFragment();
+
+            filtered.forEach(q => { 
+                const el = document.createElement('div');
+                el.className = 'bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow';
+                el.innerHTML = `
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold text-teal-600">#${q.id}</span>
+                        <span class="text-xs text-gray-400">參考答案: ${q.answer}</span>
+                    </div>
+                    <p class="font-medium text-gray-800 mb-2">${q.question}</p>
+                    <p class="text-sm text-gray-600 bg-gray-50 p-2 rounded">${q.optionsRaw}</p>
+                `;
+                fragment.appendChild(el);
+            });
+            
+            container.appendChild(fragment);
+        }
+
+        // --- Quiz Logic ---
+        function startQuiz() {
+            // Shuffle questions
+            quizState.currentPool = [...appData].sort(() => 0.5 - Math.random());
+            // Limit to 20 questions max per session
+            quizState.currentPool = quizState.currentPool.slice(0, 20); 
+            
+            quizState.currentIndex = 0;
+            quizState.answers = [];
+            quizState.score = 0;
+
+            if(quizState.currentPool.length === 0) {
+                alert("目前無考題資料，請先上傳 CSV");
+                return;
+            }
+
+            navTo('quiz');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = quizState.currentPool[quizState.currentIndex];
+            
+            // Progress
+            const total = quizState.currentPool.length;
+            const current = quizState.currentIndex + 1;
+            document.getElementById('quiz-progress-text').innerText = `${current} / ${total}`;
+            document.getElementById('quiz-progress-bar').style.width = `${(current/total)*100}%`;
+
+            // Content
+            document.getElementById('quiz-id').innerText = `#${q.id}`;
+            document.getElementById('quiz-question').innerText = q.question;
+            
+            // Options Parsing
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            // Reset feedback
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+            document.getElementById('btn-finish').classList.add('hidden');
+            
+            const optionRegex = /\((\d+)\)([^()]+)/g;
+            let match;
+            let parsedOptions = [];
+            let tempStr = q.optionsRaw;
+            
+            while ((match = optionRegex.exec(tempStr)) !== null) {
+                parsedOptions.push({ id: match[1], text: match[2].trim() });
+            }
+
+            if (parsedOptions.length < 2) {
+                const textDiv = document.createElement('div');
+                textDiv.className = "bg-blue-50 p-4 rounded text-gray-700 mb-4";
+                textDiv.innerText = q.optionsRaw;
+                optionsContainer.appendChild(textDiv);
+                
+                ['1', '2', '3', '4'].forEach(id => {
+                    createOptionBtn(id, `選項 (${id})`, optionsContainer);
+                });
+            } else {
+                parsedOptions.forEach(opt => {
+                    createOptionBtn(opt.id, `(${opt.id}) ${opt.text}`, optionsContainer);
+                });
+            }
+        }
+
+        function createOptionBtn(id, text, container) {
+            const btn = document.createElement('button');
+            btn.className = "option-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-teal-500 hover:bg-teal-50 font-medium text-gray-700 relative";
+            btn.innerHTML = text;
+            btn.onclick = () => handleAnswer(id, btn);
+            btn.dataset.id = id;
+            container.appendChild(btn);
+        }
+
+        function handleAnswer(selectedId, btnElement) {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+
+            const q = quizState.currentPool[quizState.currentIndex];
+            const correctIds = q.answer.toString().replace(/[()]/g, '').split(',').map(s => s.trim());
+            
+            const isCorrect = correctIds.includes(selectedId);
+            
+            quizState.answers.push({
+                question: q,
+                userChoice: selectedId,
+                isCorrect: isCorrect,
+                correctAnswer: q.answer
+            });
+
+            if (isCorrect) {
+                btnElement.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                quizState.score++;
+                document.getElementById('feedback-content').innerHTML = `<span class="text-green-600 font-bold">✅ 答對了！</span>`;
+            } else {
+                btnElement.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                
+                buttons.forEach(b => {
+                    if (correctIds.includes(b.dataset.id)) {
+                        b.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                    }
+                });
+                
+                document.getElementById('feedback-content').innerHTML = `<span class="text-red-600 font-bold">❌ 答錯了！</span> <span class="text-gray-600 text-sm ml-2">參考答案: ${q.answer}</span>`;
+            }
+
+            document.getElementById('quiz-feedback').classList.remove('hidden');
+            
+            if (quizState.currentIndex === quizState.currentPool.length - 1) {
+                document.getElementById('btn-next').classList.add('hidden');
+                document.getElementById('btn-finish').classList.remove('hidden');
+            }
+        }
+
+        function nextQuestion() {
+            quizState.currentIndex++;
+            renderQuestion();
+        }
+
+        function finishQuiz() {
+            const total = quizState.currentPool.length;
+            const correct = quizState.score;
+            const wrong = total - correct;
+
+            document.getElementById('result-score').innerText = `${correct} / ${total}`;
+            renderResultChart(correct, wrong);
+
+            const list = document.getElementById('wrong-answers-list');
+            list.innerHTML = '';
+            
+            const wrongItems = quizState.answers.filter(a => !a.isCorrect);
+            
+            if (wrongItems.length === 0) {
+                 list.innerHTML = '<div class="p-8 text-center text-green-600 font-bold text-lg">完美表現！沒有任何錯誤！🌟</div>';
+            } else {
+                wrongItems.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'p-6 hover:bg-red-50 transition-colors';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-red-600 font-bold text-sm">錯題 #${item.question.id}</span>
+                            <span class="text-gray-400 text-xs">您的選擇: (${item.userChoice})</span>
+                        </div>
+                        <p class="font-bold text-gray-800 mb-2">${item.question.question}</p>
+                        <div class="bg-white border border-red-100 p-3 rounded text-sm text-gray-600">
+                             ${item.question.optionsRaw}
+                        </div>
+                        <div class="mt-2 text-sm font-bold text-green-600">
+                            正確答案: ${item.correctAnswer}
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            navTo('results');
+        }
+
+        let resultChartInstance = null;
+
+        function renderResultChart(correct, wrong) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            if (resultChartInstance) resultChartInstance.destroy();
+
+            resultChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['答對', '答錯'],
+                    datasets: [{
+                        label: '題數',
+                        data: [correct, wrong],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, grid: { display: false } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Start App
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
